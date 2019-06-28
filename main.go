@@ -1,17 +1,12 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"time"
 
-	"github.com/labstack/echo"
-	"google.golang.org/grpc"
-
 	pb "github.com/introphin/proto-advertiser-usecase"
+	"github.com/labstack/echo"
 )
 
 type Repository struct {
@@ -47,92 +42,12 @@ func main() {
 	e.POST("/", post)
 	e.Logger.Fatal(e.Start(":8080"))
 }
+
 func get(c echo.Context) error {
-	m := Client{}
-	if err := c.Bind(&m); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	uuid := m.Uuid
-	if m.Uuid == "" {
-		uuid = m.Tuuid
-	}
-
-	log.Println("get order uuid:", uuid)
-
-	go sendPostback(uuid)
-
-	return c.String(http.StatusOK, fmt.Sprintf(`{"status_code": "Ok", "uuid": %v}`, uuid))
+	return c.String(http.StatusOK, `{"status_code": "Ok"}`)
 }
 
 // Handler
 func post(c echo.Context) error {
 	return c.String(http.StatusOK, `{"status_code": "Ok"}`)
-}
-
-func sendPostback(uuid string) {
-	rand.Seed(time.Now().UTC().UnixNano())
-	// Set up a connection to the server.
-	conn, err := grpc.Dial("localhost:50053", grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-
-	r := Repository{
-		adv: pb.NewAdvertiserUsecaseServiceClient(conn),
-	}
-
-	postback, err := r.CreatePostback(uuid)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	log.Printf("postback %#v\r\n", postback)
-}
-
-func (r Repository) CreatePostback(uuid string) (Postback, error) {
-	if uuid == "" {
-		log.Println("uuid empty")
-		log.Println("uuid empty")
-		log.Println("uuid empty")
-		log.Println("uuid empty")
-		log.Println("uuid empty")
-		log.Println("uuid empty")
-	}
-	request := &pb.CreatePostbackRequest{
-		UserId:        int32(rand.Intn(999)),
-		ClickId:       uuid,
-		Payout:        rand.Float32(),
-		AccessToken:   "AccessToken",
-		TransactionId: "TransactionId",
-		Status:        "enable",
-	}
-	pbPostback, err := r.adv.CreatePostback(context.Background(), request)
-	if err != nil {
-		return Postback{}, err
-	}
-
-	postback := Postback{
-		Id:            pbPostback.Id,
-		Uuid:          pbPostback.Uuid,
-		UserId:        pbPostback.UserId,
-		Stage:         pbPostback.Stage,
-		ClickId:       pbPostback.ClickId,
-		Payout:        pbPostback.Payout,
-		AccessToken:   pbPostback.AccessToken,
-		TransactionId: pbPostback.TransactionId,
-		Status:        pbPostback.Status,
-	}
-	if pbPostback.CreatedAt != nil {
-		ca := time.Unix(pbPostback.CreatedAt.Seconds, 0).UTC()
-		postback.CreatedAt = &ca
-	}
-	if pbPostback.UpdatedAt != nil {
-		ua := time.Unix(pbPostback.UpdatedAt.Seconds, 0).UTC()
-		postback.UpdatedAt = &ua
-	}
-
-	return postback, nil
 }
