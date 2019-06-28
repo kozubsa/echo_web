@@ -13,7 +13,7 @@ func main() {
 	e := echo.New()
 	e.GET("/", get)
 	e.POST("/", post)
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(":80"))
 }
 
 func get(c echo.Context) error {
